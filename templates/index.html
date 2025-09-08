@@ -1,33 +1,233 @@
 <!doctype html>
-<html>
+<html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>AI Resume Screener</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Auto HR AI — Upload Resume</title>
+
+  <!-- Tailwind Play CDN (quick) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Heroicons -->
+  <script src="https://unpkg.com/feather-icons"></script>
+
+  <!-- Chart.js for future preview charts -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
   <style>
-    body { font-family: Arial, max-width: 800px; margin: 30px auto; padding: 0 20px;}
-    label{display:block; margin-top:10px;}
-    textarea{width:100%; height:120px;}
+    /* small custom */
+    .glass {
+      background: linear-gradient(135deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03));
+      backdrop-filter: blur(6px);
+      border: 1px solid rgba(255,255,255,0.06);
+    }
   </style>
 </head>
-<body>
-  <h1>AI Resume Screener</h1>
-  <form method="post" enctype="multipart/form-data">
-    <label>Upload resume (PDF, DOCX, TXT):
-      <input type="file" name="resume" required />
-    </label>
+<body class="bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 text-slate-100 min-h-screen antialiased">
 
-    <label>Paste Job Description (JD):
-      <textarea name="jd_text" placeholder="Paste full job description here" required></textarea>
-    </label>
+  <!-- NAV -->
+  <nav class="max-w-6xl mx-auto p-4 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-pink-500 to-violet-500 flex items-center justify-center font-bold text-white">AH</div>
+      <div>
+        <div class="text-lg font-semibold">Auto HR AI</div>
+        <div class="text-xs text-slate-400">Resume scanner & smart matcher</div>
+      </div>
+    </div>
+    <div class="hidden md:flex gap-4 items-center">
+      <a href="#" class="text-slate-300 hover:text-white">Docs</a>
+      <a href="#" class="text-slate-300 hover:text-white">Settings</a>
+      <button id="sampleExampleBtn" class="px-4 py-2 rounded-md bg-pink-600 hover:bg-pink-500">Try sample</button>
+    </div>
+  </nav>
 
-    <label>Optional: Enter JD skills (comma separated):
-      <input type="text" name="jd_skills" placeholder="e.g. python, flask, aws" />
-    </label>
+  <!-- MAIN -->
+  <main class="max-w-6xl mx-auto p-6">
+    <header class="mb-8">
+      <h1 class="text-3xl md:text-4xl font-extrabold leading-tight">
+        Modern Resume Upload — Fast, smart, beautiful
+      </h1>
+      <p class="text-slate-400 mt-2">Drop resumes, or browse to upload. We'll parse skills, experience, and show match results instantly.</p>
+    </header>
 
-    <button type="submit">Analyze Resume</button>
-  </form>
+    <!-- Upload card -->
+    <section class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div class="md:col-span-2 glass p-6 rounded-2xl shadow-lg">
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="text-xl font-semibold">Upload Resume</h2>
+            <p class="text-sm text-slate-400 mt-1">PDF, DOCX, or TXT. Max 5MB.</p>
+          </div>
+          <div class="text-sm text-slate-400">Secure • Private • Fast</div>
+        </div>
 
-  <hr/>
-  <p>Tip: For best results include the full JD and list of desired skills.</p>
+        <div id="dropzone" class="mt-6 border-2 border-dashed border-slate-700 rounded-lg p-8 text-center transition-all hover:scale-[1.01] cursor-pointer">
+          <svg class="mx-auto mb-4" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 5 17 10"/>
+            <line x1="12" y1="5" x2="12" y2="19"/>
+          </svg>
+          <p class="text-slate-300">Drag & drop resume here</p>
+          <p class="text-xs text-slate-500 mt-2">or</p>
+          <button id="filePicker" class="mt-3 px-4 py-2 bg-pink-600 rounded-md">Browse files</button>
+          <input id="fileInput" type="file" accept=".pdf,.doc,.docx,.txt" class="hidden" />
+        </div>
+
+        <div id="previewArea" class="mt-6 hidden">
+          <h3 class="text-sm text-slate-300 font-medium">Selected file</h3>
+          <div id="fileCard" class="mt-2 flex items-center justify-between bg-slate-800 p-3 rounded-md">
+            <div>
+              <div id="fileName" class="font-medium"></div>
+              <div id="fileSize" class="text-xs text-slate-400"></div>
+            </div>
+            <div class="flex gap-2">
+              <button id="uploadBtn" class="px-4 py-2 bg-emerald-500 rounded-md text-slate-900 font-semibold hover:bg-emerald-400">Upload & Parse</button>
+              <button id="removeBtn" class="px-3 py-2 border rounded-md text-slate-300 border-slate-600">Remove</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- hints -->
+        <div class="mt-6 text-xs text-slate-500 flex gap-4">
+          <div>Tip: Use a resume with bullet points for better parsing.</div>
+          <div class="ml-auto">Powered by your Flask backend</div>
+        </div>
+      </div>
+
+      <!-- Right summary / sample -->
+      <aside class="glass p-6 rounded-2xl shadow-lg">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="font-semibold">Quick demo</h3>
+          <span class="text-xs text-slate-400">Preview</span>
+        </div>
+
+        <div id="sampleCard" class="rounded-lg p-3 bg-slate-900">
+          <div class="flex items-center gap-3">
+            <div class="w-12 h-12 rounded-md bg-gradient-to-br from-violet-500 to-pink-500 flex items-center justify-center font-bold">JD</div>
+            <div>
+              <div class="font-medium">Software Engineer — Backend</div>
+              <div class="text-xs text-slate-400">Req: Python, Flask, SQL</div>
+            </div>
+          </div>
+
+          <div class="mt-4">
+            <div class="text-xs text-slate-400">Expected match:</div>
+            <div class="mt-2 grid grid-cols-3 gap-2">
+              <div class="p-2 bg-slate-800 rounded-md text-center">
+                <div class="text-sm font-semibold">Match</div>
+                <div class="text-2xl font-bold text-emerald-400">82%</div>
+              </div>
+              <div class="p-2 bg-slate-800 rounded-md text-center">
+                <div class="text-sm font-semibold">Skills</div>
+                <div class="text-2xl font-bold text-pink-400">Top 5</div>
+              </div>
+              <div class="p-2 bg-slate-800 rounded-md text-center">
+                <div class="text-sm font-semibold">Experience</div>
+                <div class="text-2xl font-bold text-sky-400">3y</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-4 text-xs text-slate-400">
+            Click <span class="font-medium text-slate-200">Try sample</span> to see how the UI looks with data.
+          </div>
+        </div>
+
+        <div class="mt-4 flex gap-2">
+          <a href="#" class="flex-1 inline-flex items-center justify-center px-4 py-2 rounded-md border border-slate-700">Learn more</a>
+          <a href="#" class="flex-1 inline-flex items-center justify-center px-4 py-2 rounded-md bg-pink-600">Contact</a>
+        </div>
+      </aside>
+    </section>
+
+    <!-- Footer small -->
+    <footer class="max-w-6xl mx-auto mt-12 text-center text-xs text-slate-500">
+      Built for your Auto HR project — replace endpoints if needed: POST /upload (multipart/form-data).
+    </footer>
+  </main>
+
+  <script>
+    // Basic interactivity: drag & drop, file preview, upload to /upload
+    const dropzone = document.getElementById('dropzone');
+    const fileInput = document.getElementById('fileInput');
+    const filePicker = document.getElementById('filePicker');
+    const previewArea = document.getElementById('previewArea');
+    const fileNameEl = document.getElementById('fileName');
+    const fileSizeEl = document.getElementById('fileSize');
+    const uploadBtn = document.getElementById('uploadBtn');
+    const removeBtn = document.getElementById('removeBtn');
+    const sampleExampleBtn = document.getElementById('sampleExampleBtn');
+
+    let selectedFile = null;
+
+    ['dragenter','dragover'].forEach(e => {
+      dropzone.addEventListener(e, (ev) => { ev.preventDefault(); dropzone.classList.add('ring-2','ring-pink-500'); });
+    });
+    ['dragleave','drop'].forEach(e => {
+      dropzone.addEventListener(e, (ev) => { ev.preventDefault(); dropzone.classList.remove('ring-2','ring-pink-500'); });
+    });
+    dropzone.addEventListener('drop', (ev) => {
+      const f = ev.dataTransfer.files[0];
+      handleFile(f);
+    });
+    filePicker.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', (ev) => handleFile(ev.target.files[0]));
+    dropzone.addEventListener('click', () => fileInput.click());
+
+    function handleFile(f) {
+      if(!f) return;
+      selectedFile = f;
+      fileNameEl.textContent = f.name;
+      fileSizeEl.textContent = (f.size/1024).toFixed(1) + " KB";
+      previewArea.classList.remove('hidden');
+    }
+
+    removeBtn.addEventListener('click', () => {
+      selectedFile = null;
+      previewArea.classList.add('hidden');
+      fileInput.value = "";
+    });
+
+    uploadBtn.addEventListener('click', async () => {
+      if(!selectedFile) return alert('Pick a file first');
+      const fd = new FormData();
+      fd.append('resume', selectedFile);
+
+      uploadBtn.disabled = true;
+      uploadBtn.textContent = 'Uploading...';
+      try {
+        // default path - adapt to your Flask endpoint
+        const res = await fetch('/upload', {
+          method: 'POST',
+          body: fd
+        });
+        if (!res.ok) {
+          const t = await res.text();
+          throw new Error(t || 'Upload failed');
+        }
+        // if backend returns JSON with id: redirect
+        const data = await res.json().catch(()=>null);
+        if(data && data.result_id){
+          window.location.href = `/results/${data.result_id}`;
+        } else {
+          // fallback: go to results (server may redirect)
+          window.location.reload();
+        }
+      } catch (err) {
+        alert('Upload error: ' + err.message);
+      } finally {
+        uploadBtn.disabled = false;
+        uploadBtn.textContent = 'Upload & Parse';
+      }
+    });
+
+    sampleExampleBtn.addEventListener('click', () => {
+      // quick sample demonstration — redirect to a demo results page
+      window.location.href = '/results/demo';
+    });
+
+    // feather icons
+    feather && feather.replace();
+  </script>
 </body>
 </html>

@@ -1,9 +1,4 @@
-flask
-python-magic
+﻿flask
 pdfminer.six
-docx2txt
-sentence-transformers
-scikit-learn
-spacy
-nltk
-python-dotenv
+python-docx
+pdfplumber

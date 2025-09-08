@@ -1,60 +1,82 @@
-# app.py
+from flask import Flask, render_template, request, jsonify, send_file, redirect, url_for
 import os
-from flask import Flask, request, render_template, redirect, url_for, send_from_directory, jsonify
 from resume_parser import parse_resume
-from matcher import ResumeMatcher
-from werkzeug.utils import secure_filename
-
-UPLOAD_FOLDER = "uploads"
-ALLOWED_EXT = {".pdf", ".docx", ".doc", ".txt"}
+from matcher import match_resume_to_job
+import uuid
+import json
 
 app = Flask(__name__)
-app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
+UPLOAD_FOLDER = 'uploads'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-matcher = ResumeMatcher()
+# simple in-memory store for demo
+STORE = {}
 
-def allowed_file(filename):
-    ext = os.path.splitext(filename)[1].lower()
-    return ext in ALLOWED_EXT
-
-@app.route("/", methods=["GET", "POST"])
+@app.route('/')
 def index():
-    if request.method == "POST":
-        # file upload
-        file = request.files.get("resume")
-        jd_text = request.form.get("jd_text", "")
-        jd_skills_text = request.form.get("jd_skills", "")
-        jd_skills = [s.strip().lower() for s in jd_skills_text.split(",") if s.strip()]
-        if file and allowed_file(file.filename):
-            filename = secure_filename(file.filename)
-            path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
-            file.save(path)
-            parsed = parse_resume(path)
-            # if parser didn't find skills, try matcher extractor
-            resume_skills = parsed.get("skills") or matcher.extract_skills_from_text(parsed["text"])
-            # compute match
-            scores = matcher.overall_score(parsed["text"], jd_text, resume_skills, jd_skills)
-            # suggestions: missing skills
-            missing = [s for s in jd_skills if s.lower() not in [r.lower() for r in resume_skills]]
-            response = {
-                "emails": parsed.get("emails", []),
-                "phones": parsed.get("phones", []),
-                "years_experience": parsed.get("years_experience", 0),
-                "resume_skills": resume_skills,
-                "jd_skills": jd_skills,
-                "scores": scores,
-                "missing_skills": missing
-            }
-            return render_template("result.html", result=response)
-        else:
-            return "Invalid or missing file (allowed: pdf, docx, txt)", 400
-    return render_template("index.html")
+    return render_template('index.html')
 
-# simple static for uploaded files (optional)
-@app.route("/uploads/<path:filename>")
-def uploaded_file(filename):
-    return send_from_directory(app.config["UPLOAD_FOLDER"], filename)
+@app.route('/upload', methods=['POST'])
+def upload():
+    f = request.files.get('resume')
+    if not f:
+        return "No file", 400
+    uid = str(uuid.uuid4())
+    path = os.path.join(UPLOAD_FOLDER, uid + "_" + f.filename)
+    f.save(path)
+    parsed = parse_resume(path)
+    # simplistic matching demo
+    matched = match_resume_to_job(parsed, {
+        "title": "Backend Engineer",
+        "skills": ["python", "flask", "sql"]
+    })
+    STORE[uid] = {
+        "parsed": parsed,
+        "matched": matched
+    }
+    return jsonify({"result_id": uid})
 
-if __name__ == "__main__":
-    app.run(debug=True, port=5000)
+@app.route('/results/<id>')
+def results(id):
+    data = STORE.get(id)
+    if not data:
+        # demo data
+        data = {
+            "name": "Demo Candidate",
+            "initials": "DC",
+            "headline": "Software Engineer",
+            "match_score": 78,
+            "top_skills": ["Python","Flask","SQL","Docker"],
+            "reasons": ["Has Python", "Has Flask experience", "Relevant projects"],
+            "cleaned_text": "Demo parsed resume text...",
+            "skill_labels": ["Python","Flask","SQL","Docker","AWS","GIT"],
+            "skill_values": [85,70,60,55,40,75],
+            "candidate_id": "demo",
+            "overlap_skills": ["Python","Flask"]
+        }
+    else:
+        parsed = data['parsed']
+        matched = data['matched']
+        data = {
+            "name": parsed.get("name","Candidate Name"),
+            "initials": "".join([p[0] for p in parsed.get("name","C").split()])[:2],
+            "headline": parsed.get("title",""),
+            "match_score": matched.get("score", 0),
+            "top_skills": parsed.get("skills", [])[:8],
+            "reasons": matched.get("reasons", []),
+            "cleaned_text": parsed.get("text",""),
+            "skill_labels": parsed.get("skills",[])[:6],
+            "skill_values": [80]*len(parsed.get("skills",[])[:6]),
+            "candidate_id": id,
+            "overlap_skills": list(set(parsed.get("skills",[])).intersection(set(["python","flask","sql"])))
+        }
+    return render_template('result.html', data=data)
+
+@app.route('/report/<id>')
+def report(id):
+    # placeholder: return the rendered results as html file
+    data = STORE.get(id)
+    return redirect(url_for('results', id=id))
+
+if __name__ == '__main__':
+    app.run(debug=True)
