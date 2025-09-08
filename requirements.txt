@@ -1,0 +1,9 @@
+flask
+python-magic
+pdfminer.six
+docx2txt
+sentence-transformers
+scikit-learn
+spacy
+nltk
+python-dotenv

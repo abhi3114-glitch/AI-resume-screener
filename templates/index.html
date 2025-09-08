@@ -1,0 +1,33 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>AI Resume Screener</title>
+  <style>
+    body { font-family: Arial, max-width: 800px; margin: 30px auto; padding: 0 20px;}
+    label{display:block; margin-top:10px;}
+    textarea{width:100%; height:120px;}
+  </style>
+</head>
+<body>
+  <h1>AI Resume Screener</h1>
+  <form method="post" enctype="multipart/form-data">
+    <label>Upload resume (PDF, DOCX, TXT):
+      <input type="file" name="resume" required />
+    </label>
+
+    <label>Paste Job Description (JD):
+      <textarea name="jd_text" placeholder="Paste full job description here" required></textarea>
+    </label>
+
+    <label>Optional: Enter JD skills (comma separated):
+      <input type="text" name="jd_skills" placeholder="e.g. python, flask, aws" />
+    </label>
+
+    <button type="submit">Analyze Resume</button>
+  </form>
+
+  <hr/>
+  <p>Tip: For best results include the full JD and list of desired skills.</p>
+</body>
+</html>
